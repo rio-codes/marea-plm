@@ -183,29 +183,33 @@ async function leeClaude(conRed) {
     const datos = leerJson(ruta);
     if (!datos) return null;
 
+    const tok = tokenClaude();
+    const cache = datos.cachedUsageUtilization;
+    const tieneCache = cache && typeof cache === "object" && cache.utilization &&
+        Array.isArray(cache.utilization.limits) && cache.utilization.limits.length > 0;
+
+    if (!tok && !tieneCache) return null;
+
     const cuenta = datos.oauthAccount || {};
     const tier = cuenta.userRateLimitTier || cuenta.organizationRateLimitTier;
     const plan = PLANES[tier] || tier || "";
 
-    if (conRed) {
+    if (conRed && tok) {
         const vivo = await usoEnVivo();
-        if (vivo) return { plan, origen: "servidor", observadoEn: vivo.cuando,
-                           limites: limitesClaude(vivo.uso) };
+        if (vivo && vivo.uso && Array.isArray(vivo.uso.limits) && vivo.uso.limits.length > 0)
+            return { plan, origen: "servidor", observadoEn: vivo.cuando,
+                     limites: limitesClaude(vivo.uso) };
     }
 
-    //  El respaldo. Se refresca de tarde en tarde —medido en k4: decía 6 %
-    //  cuando el servidor decía 24 %, con dos horas de retraso— así que aquí
-    //  importa más que nunca decir de cuándo es.
-    const cache = datos.cachedUsageUtilization;
-    if (!cache || typeof cache !== "object")
-        return { plan, origen: null, observadoEn: null, limites: [],
-                 razon: "sin-datos" };
-    const fetched = cache.fetchedAtMs;
-    return {
-        plan, origen: "cache",
-        observadoEn: typeof fetched === "number" ? fetched / 1000 : null,
-        limites: limitesClaude(cache.utilization || {}),
-    };
+    if (tieneCache) {
+        const fetched = cache.fetchedAtMs;
+        return {
+            plan, origen: "cache",
+            observadoEn: typeof fetched === "number" ? fetched / 1000 : null,
+            limites: limitesClaude(cache.utilization),
+        };
+    }
+    return null;
 }
 
 // ── Codex ────────────────────────────────────────────────────────
@@ -302,30 +306,143 @@ function leeCodex() {
         hallazgo = ultimoLimite(r);
         if (hallazgo) break;
     }
-    //  Local, y se dice. El lector de k4 no lo marcaba y su procedencia se
-    //  perdía por el camino.
-    if (!hallazgo) return { origen: "local", observadoEn: null, limites: [],
-                            razon: "sin-datos" };
+    if (!hallazgo) return null;
 
     const { info, cuando } = hallazgo;
     const limites = [ventanaCodex(info.primary, "primaria", cuando),
                      ventanaCodex(info.secondary, "secundaria", cuando)].filter(Boolean);
+    if (limites.length === 0) return null;
     const creditos = info.credits || {};
     const agente = {
         plan: info.plan_type ? String(info.plan_type).replace(/^./, (c) => c.toUpperCase()) : "",
         origen: "local", observadoEn: cuando, limites,
     };
-    //  Los créditos aparte, y solo si los hay: nunca mezclados con el
-    //  porcentaje incluido.
     if (creditos.unlimited === true) agente.creditos = "sin-limite";
     else if (creditos.has_credits === true && creditos.balance !== undefined)
         agente.creditos = String(creditos.balance);
     return agente;
 }
 
+// ── Google Gemini ────────────────────────────────────────────────
+
+const GEMINI_JSONS = [
+    process.env.MAREA_AGENT_DIR ? join(process.env.MAREA_AGENT_DIR, "pi", "auth.json") : null,
+    process.env.XDG_STATE_HOME ? join(process.env.XDG_STATE_HOME, "marea-plm", "agent", "pi", "auth.json") : null,
+    join(homedir(), ".local", "state", "marea-plm", "agent", "pi", "auth.json"),
+    join(estado(), "auth.json"),
+];
+
+function tokenGemini() {
+    if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY.trim();
+    for (const r of GEMINI_JSONS) {
+        if (!r || !existsSync(r)) continue;
+        const j = leerJson(r);
+        if (j?.google?.key) return String(j.google.key).trim();
+    }
+    const keysConf = join(homedir(), ".config", "pleamar", "keys.conf");
+    if (existsSync(keysConf)) {
+        try {
+            const lines = readFileSync(keysConf, "utf8").split("\n");
+            for (const l of lines) {
+                const m = l.match(/^\s*(?:GEMINI_API_KEY|google)\s*=\s*["']?([^"'\s]+)/i);
+                if (m) return m[1].trim();
+            }
+        } catch (e) {}
+    }
+    return null;
+}
+
+const GEMINI_MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_ESPERA = 5000;
+const GEMINI_CACHE_S = 180;
+
+async function leeGemini(conRed) {
+    const key = tokenGemini();
+    if (!key) return null;
+
+    const cachePath = join(estado(), "reservas-gemini.json");
+    const guardado = leerJson(cachePath);
+    const ahoraS = ahora();
+
+    let verificado = false;
+    let cuando = ahoraS;
+
+    if (guardado && ahoraS - (guardado.cuando || 0) < GEMINI_CACHE_S) {
+        verificado = guardado.valido === true;
+        cuando = guardado.cuando;
+    } else if (conRed) {
+        try {
+            const corte = AbortSignal.timeout(GEMINI_ESPERA);
+            const r = await fetch(`${GEMINI_MODELS_URL}?key=${encodeURIComponent(key)}`, {
+                signal: corte,
+                headers: { "User-Agent": "marea-reservas/1.0" },
+            });
+            verificado = r.ok;
+            cuando = ahoraS;
+            try {
+                mkdirSync(dirname(cachePath), { recursive: true });
+                writeFileSync(cachePath, JSON.stringify({ cuando, valido: verificado }));
+            } catch (e) {}
+        } catch (e) {
+            if (guardado) {
+                verificado = guardado.valido === true;
+                cuando = guardado.cuando;
+            }
+        }
+    } else if (guardado) {
+        verificado = guardado.valido === true;
+        cuando = guardado.cuando;
+    } else {
+        verificado = key.length > 20;
+    }
+
+    if (!verificado) return null;
+
+    const usoPath = join(homedir(), ".local", "state", "marea-plm", "agent", "usage-gemini.json");
+    const uso = leerJson(usoPath) || {};
+    const peticiones = Array.isArray(uso.requests) ? uso.requests : [];
+
+    const req1Min = peticiones.filter((t) => typeof t === "number" && t > ahoraS - 60).length;
+    const rpmPct = Math.min(100, Math.round((req1Min / 15) * 100));
+
+    const req24h = peticiones.filter((t) => typeof t === "number" && t > ahoraS - 86400).length;
+    const rpdPct = Math.min(100, Math.round((req24h / 1500) * 100));
+
+    const renuevaMin = ahoraS + (60 - (ahoraS % 60));
+    const d = new Date();
+    const mananaUtc = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0) / 1000;
+
+    const limites = [
+        {
+            id: "rpm",
+            nombre: "Por minuto",
+            duracionMin: 1,
+            usadoPct: rpmPct,
+            renuevaEn: renuevaMin,
+            activo: true,
+        },
+        {
+            id: "diario",
+            nombre: "Diario",
+            duracionMin: 1440,
+            usadoPct: rpdPct,
+            renuevaEn: mananaUtc,
+            activo: true,
+        },
+    ];
+
+    return {
+        plan: "AI Studio",
+        origen: "servidor",
+        observadoEn: cuando,
+        limites,
+    };
+}
+
 // ── el registro ──────────────────────────────────────────────────
 
 const AGENTES = [
+    { id: "gemini", nombre: "Google Gemini", lee: leeGemini, red: true },
     { id: "claude", nombre: "Claude Code", binario: "claude", lee: leeClaude, red: true },
     { id: "codex", nombre: "Codex", binario: "codex", lee: leeCodex, red: false },
 ];
@@ -335,11 +452,11 @@ const fuera = [];
 for (const a of AGENTES) {
     //  Sin el programa no hay tarjeta: un agente que no está instalado no
     //  merece una tarjeta vacía diciendo que no tiene datos.
-    if (!enElCamino(a.binario)) continue;
+    if (a.binario && !enElCamino(a.binario)) continue;
     let datos = null;
     try { datos = a.red ? await a.lee(conRed) : a.lee(); }
-    catch (e) { datos = { origen: null, observadoEn: null, limites: [], razon: "error" }; }
-    if (datos === null) continue;
+    catch (e) { datos = null; }
+    if (!datos || !datos.limites || datos.limites.length === 0) continue;
     //  Pasada la hora, la ventana queda pendiente de confirmar. No se llena
     //  sola: eso sería inventarse una observación que nadie ha hecho.
     for (const l of datos.limites || [])

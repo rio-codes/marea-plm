@@ -18,17 +18,18 @@ return function(shared)
         local d, h, m = seconds // 86400, (seconds % 86400) // 3600, (seconds % 3600) // 60
         if d > 0 then return string.format("%d d %d h", d, h) end
         if h > 0 then return string.format("%d h %02d", h, m) end
-        return string.format("%d min", math.max(m, 1))
+        if m > 0 then return string.format("%d min", m) end
+        return string.format("%d s", math.max(seconds, 1))
     end
 
-    local WINDOW_NAMES = { [300] = "5 hours", [10080] = "Weekly" }
+    local WINDOW_NAMES = { [1] = "1 min", [300] = "5 hours", [1440] = "Daily", [10080] = "Weekly" }
 
     local function paint_agents()
         local now = os.time()
         local worst = 101
         for a = 1, 2 do
             local g = agents[a]
-            fact["ag.kind." .. a] = g and (g.id == "claude" and 1 or (g.id == "codex" and 2 or 3)) or 0
+            fact["ag.kind." .. a] = g and (g.id == "claude" and 1 or (g.id == "codex" and 2 or (g.id == "gemini" and 3 or 4))) or 0
             text["ag.name." .. a] = g and g.name or ""
             if g then
                 local parts = {}
@@ -45,7 +46,7 @@ return function(shared)
             --  A reading older than a quarter of an hour is drawn, never trusted
             --  for her face or the little tube.
             local fresh = g and g.observed and now - g.observed < 900
-            for l = 1, 3 do
+            for l = 1, 4 do
                 local w = g and g.limits[l]
                 local k = a .. "." .. l
                 fact["ag.on." .. k] = w ~= nil

@@ -76,7 +76,7 @@ part Agents {
                 move: 0, (1 - clamp((reveal - (a - 1) * 0.12) * 3, 0, 1)) * 12
                 box { at: card.x, agents.ay + 88; size: 456, 178; corner: 16; color: mix(#202122, ink, glassiness); opacity: mix(1, veil, glassiness) }
                 //  Who it is. Claude: its burst of rays, turning very
-                //  slowly. Codex: a hexagon with its prompt.
+                //  slowly. Codex: a hexagon with its prompt. Gemini: a 4-point sparkle.
                 group {
                     show: ag.kind.$a == 1
                     repeat r in 0..10 {
@@ -91,6 +91,12 @@ part Agents {
                            move 0, -11; line 9.5, -5.5; line 9.5, 5.5; line 0, 11; line -9.5, 5.5; line -9.5, -5.5; close }
                     path { at: ax0 + 22, agents.ay + 24; stroke: 1.6; color: ink; move 0, -3.5; line 3.5, 0; line 0, 3.5 }
                     line { from: ax0 + 27, agents.ay + 27.5; to: ax0 + 31, agents.ay + 27.5; width: 1.6; color: ink }
+                }
+                group {
+                    show: ag.kind.$a == 3
+                    path { at: ax0 + 26, agents.ay + 24; color: #4e8df5
+                           move 0, -10; curve 10, 0 via 2, -2; curve 0, 10 via 2, 2; curve -10, 0 via -2, 2; curve 0, -10 via -2, -2; close }
+                    ellipse { at: ax0 + 26, agents.ay + 24; radius: 2; color: #ffffff; opacity: 60% }
                 }
                 text ag.name.$a { at: ax0 + 46, agents.ay + 17; anchor: left center; size: 15; weight: 600; color: ink }
                 text ag.sub.$a { at: ax0 + 46, agents.ay + 35; anchor: left center; size: 11; width: 380; lines: 1; color: faint; opacity: 75% }

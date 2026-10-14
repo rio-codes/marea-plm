@@ -407,6 +407,20 @@ async function saveApiKey(m) {
     send({ type: "key_saved", ok: true, provider, model: session?.model ? `${session.model.provider}/${session.model.id}` : null });
 }
 
+function recordTurn(provider) {
+    if (provider !== "google") return;
+    try {
+        const p = join(STATE, "usage-gemini.json");
+        let cur = { requests: [] };
+        try { cur = JSON.parse(readFileSync(p, "utf-8")); } catch {}
+        if (!Array.isArray(cur.requests)) cur.requests = [];
+        const cutoff = Date.now() / 1000 - 86400;
+        cur.requests = cur.requests.filter((t) => typeof t === "number" && t > cutoff);
+        cur.requests.push(Math.round(Date.now() / 1000));
+        writeFileSync(p, JSON.stringify(cur));
+    } catch (e) {}
+}
+
 async function prompt(m) {
     if (!session || !usable) {
         send({ type: "failed", reason: session ? "no_model" : "not_started" });
@@ -447,6 +461,7 @@ async function prompt(m) {
             send({ type: "failed", reason: lastError });
         } else {
             send({ type: "done" });
+            recordTurn(session?.model?.provider);
         }
     } catch (e) {
         send(signal.aborted ? { type: "cancelled" } : { type: "failed", reason: String(e?.message || e).slice(0, 300) });
