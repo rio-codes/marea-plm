@@ -14,9 +14,9 @@ return function(shared)
     --  How her hands are run: what they say went wrong comes back too, and
     --  the cursor on the desktop is labelled hers.
     local HANDS = { errors = true, env = { PLEAMAR_AGENT_NAME = "Marea" } }
-    local DEFAULT_MODEL = "openai-codex/gpt-5.6-luna"
+    local DEFAULT_MODEL = "google/gemini-3.6-flash"
     local function chosen() return type(settings.chat_model) == "string" and settings.chat_model or DEFAULT_MODEL end
-    local PROVIDERS = { ["openai-codex"] = "ChatGPT" }
+    local PROVIDERS = { ["openai-codex"] = "ChatGPT", ["google"] = "Google Gemini" }
     local models = {}
     fact["chat.free"] = settings.chat_free == true
     on("fact:chat.free", function() save_settings() end)
@@ -714,9 +714,13 @@ return function(shared)
             for _, line in ipairs(queue) do write(worker, line) end
             queue = {}
         elseif kind == "login_url" then
+            log("chat · received login_url: " .. tostring(m.url))
             fact["chat.signing"] = true
-            run("xdg-open", { tostring(m.url) }, function() end)
+            run("xdg-open", { tostring(m.url) }, function(out, code)
+                log("chat · xdg-open returned", code, out)
+            end)
         elseif kind == "login_done" then
+            log("chat · login_done: ok=" .. tostring(m.ok) .. " reason=" .. tostring(m.reason))
             fact["chat.signing"] = false
             if not m.ok and m.reason ~= "cancelled" then
                 status(tr("The sign-in did not finish: ") .. tostring(m.reason or "?"))
@@ -1099,24 +1103,42 @@ return function(shared)
         send({ type = "prompt", text = words, now = os.date("%Y-%m-%d %H:%M, %A"), free = fact["chat.free"] == true })
     end)
     local function decide(i, yes)
+        local idx = tonumber(i)
         local first = math.max(1, #rows - ROWS + 1)
-        local row = first + (i or 0)
+        local row = idx and (first + idx) or nil
+        log(string.format("chat · decide: i=%s idx=%s row=%s yes=%s", tostring(i), tostring(idx), tostring(row), tostring(yes)))
+        local found_id, found_a = nil, nil
         for id, a in pairs(asks) do
-            if a.row == row then
-                asks[id] = nil
-                if yes then
-                    rows[row].state = 3
-                    local tool_row = add(3, said(a.tool, a.args), tostring(a.args.why or ""), 0)
-                    perform(id, a.tool, a.args, tool_row)
-                else
-                    rows[row].state = 2
-                    paint()
-                    answer(id, false, "", { denied = true })
-                    fact["chat.state"] = "thinking"
-                end
-                return
+            log(string.format("chat · checking ask id=%s a.row=%s tool=%s", tostring(id), tostring(a.row), tostring(a.tool)))
+            if row and a.row == row then
+                found_id, found_a = id, a
+                break
             end
         end
+        if not found_id then
+            for id, a in pairs(asks) do
+                found_id, found_a = id, a
+                log(string.format("chat · fallback to ask id=%s a.row=%s", tostring(id), tostring(a.row)))
+                break
+            end
+        end
+        if found_id and found_a then
+            asks[found_id] = nil
+            local ask_row = found_a.row
+            if rows[ask_row] then
+                rows[ask_row].state = yes and 3 or 2
+            end
+            if yes then
+                local tool_row = add(3, said(found_a.tool, found_a.args), tostring(found_a.args.why or ""), 0)
+                perform(found_id, found_a.tool, found_a.args, tool_row)
+            else
+                paint()
+                answer(found_id, false, "", { denied = true })
+                fact["chat.state"] = "thinking"
+            end
+            return
+        end
+        log("chat · decide: no pending ask found")
     end
     on("chat_allow", function(i) decide(i, true) end)
     on("chat_deny", function(i) decide(i, false) end)
@@ -1150,8 +1172,11 @@ return function(shared)
         if v == "talk" and not worker then start_worker(); rest_later() end
     end)
     on("chat_login", function()
+        log("chat · on(chat_login) triggered!")
         start_worker()
-        send({ type = "login", provider = (chosen():match("^([^/]+)/") or "openai-codex") })
+        local prov = (chosen():match("^([^/]+)/") or "openai-codex")
+        log("chat · sending login for provider: " .. tostring(prov))
+        send({ type = "login", provider = prov })
     end)
     on("chat_login_cancel", function()
         if worker then write(worker, json.encode({ type = "login_cancel" }) .. "\n") end
