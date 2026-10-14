@@ -50,8 +50,8 @@ screenshots, lock screen — written in [pleamar], on any Wayland compositor.
   session, tray, calendar, focus, your AI agents' remaining quota (Claude,
   Codex), settings — each page opens out of its own card.
 - **She talks, and can use your desktop for you** (`Super+Shift+A`, her menu,
-  the finder): a chat that grows out of her, with her AI —your ChatGPT
-  account, signed in from her settings— in a sandbox of its own. With
+  the finder): a chat that grows out of her, with her AI —Google Gemini,
+  ChatGPT, or Claude, configured from her settings— in a sandbox of its own. With
   [pleamar-wm] she also has hands: a pointer and a keyboard of her own, apart
   from yours, to open the browser, look something up or fill a form while you
   keep working. Looking at a window she does at once; anything that changes
@@ -199,6 +199,18 @@ marea shot_region    #   record_toggle, celebrate, rage, adventure…
 Click her for the control center, right-click for her menu. Her settings (look,
 home monitor, whether she follows you, language, wallpaper) are in the last
 card, and are saved in `~/.local/share/pleamar/marea/settings.json`.
+
+### Connecting AI Providers
+
+Open her settings from the control center (the gear icon on the last card) and go to **Talking with her**:
+
+1. Click **Sign in** (or **Sign in again**) on the **Her account** card to expand the **Connect AI Provider** panel.
+2. Select your provider:
+   - **Google Gemini**: Select **Google Gemini**, paste your API key from [Google AI Studio](https://aistudio.google.com/), and click **Save Key**.
+   - **ChatGPT**: Select **ChatGPT** and either click **Sign in in browser** to authenticate your OpenAI account, or paste an OpenAI API key and click **Save Key**.
+   - **Claude**: Select **Claude**, paste your Anthropic API key from the [Anthropic Console](https://console.anthropic.com/), and click **Save Key**.
+3. Click **Done**. Your configured models (such as `google/gemini-2.5-flash`, `openai/gpt-4o`, `anthropic/claude-3-7-sonnet`) will appear directly under **HER MODEL** ready to choose.
+
 
 Two variables, and they are not the same:
 
