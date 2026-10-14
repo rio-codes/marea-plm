@@ -9,15 +9,15 @@ part Chat {
     //  Let her use the computer: no cards (Settings). Off unless chosen.
     fact chat.free = false
     //  Her account and her model (Settings › Talking with her).
-    event chat_login                   // sign in: the browser opens
-    event chat_login_cancel
+    event chat_login ->                // sign in: the browser opens
+    event chat_login_cancel ->
     event chat_pick ->                 // `emit chat_pick(2)`: the third model
     event flip_chat_free
     on flip_chat_free { toggle chat.free }
     fact chat.signed_in = true         // until her engine says otherwise
     fact chat.signing = false          // the browser is open to sign in
     text chat.account = ""
-    model chat.models max 8 { name: text; on: number }
+    model chat.models max 9 { name: text; on: number }
     event chat ->                      // `marea chat`, Super+Shift+A, her menu, the finder
     text chat.input = ""
     event chat_send ->
