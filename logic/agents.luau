@@ -3,10 +3,10 @@
 return function(shared)
     local hooks = shared.hooks
     -- ── the agents' reservoirs ────────────────────────────────────────
-    --  What is left of Claude Code's and Codex's windows. `tools/reservas` reads
+    --  What is left of Google Gemini's, Claude Code's and Codex's windows. `tools/reservas` reads
     --  them —Claude from its server with the token Claude Code already keeps,
-    --  Codex from its own session logs— and prints one line per thing. Here they
-    --  go into the scene's facts; the countdowns are kept up to date every half
+    --  Codex from its own session logs, Gemini from local usage and AI Studio limits—
+    --  and prints one line per thing. Here they go into the scene's facts; the countdowns are kept up to date every half
     --  minute without asking anybody again. The rules of the old Marea hold: an
     --  unknown number is not a zero, the percentages of two windows are never
     --  added up, and a window past its renewal is «pending», not full.

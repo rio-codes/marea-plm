@@ -345,14 +345,14 @@ part Settings {
                     text "Her models appear once she is signed in." { at: card.x - 228, card.top + 332; anchor: left center; size: 11.5; color: st.faint; show: chat.models.count < 1 }
                 }
 
-                //  When setup is open: inline provider selection & key configuration
+                //  Connecting to a provider: choose Google Gemini, ChatGPT, or Claude,
+                //  and enter an API key or finish signing in in the browser.
                 group {
                     show: chat.setup_open
                     box { at: card.x, card.top + 265; size: 456, 260; corner: 16; color: #1c1d1e }
                     box { at: card.x, card.top + 265; size: 456, 260; corner: 16; stroke: 1.2; color: mint; opacity: 35% }
                     text "Connect AI Provider" { at: card.x - 206, card.top + 155; anchor: left center; size: 13; weight: 600; color: ink }
 
-                    // Provider selector pills
                     let prov.0 = if(chat.setup_provider == 0, 1, 0)
                     let prov.1 = if(chat.setup_provider == 1, 1, 0)
                     let prov.2 = if(chat.setup_provider == 2, 1, 0)
@@ -375,15 +375,12 @@ part Settings {
                     zone box prov_2_btn { at: card.x + 146, card.top + 190; size: 140, 32; corner: 16; cursor: pointer }
                     on press prov_2_btn { chat.setup_provider = 2 }
 
-                    // Description text
                     text pick(chat.setup_provider, "Enter your Google AI Studio Gemini API key:", "Sign in with ChatGPT via browser, or enter an OpenAI key:", "Enter your Anthropic Claude API key:") { at: card.x - 206, card.top + 230; anchor: left center; size: 11; color: st.faint; width: 412; lines: 1 }
 
-                    // API Key input box
                     box { at: card.x - 56, card.top + 270; size: 300, 36; corner: 10; color: #141415 }
                     input chat.key_input { at: card.x - 196, card.top + 261; width: 280; size: 12; color: ink; placeholder: "Paste API key…"; secret: true; selection: #2f5f52 }
                     on submit chat.key_input { emit chat_save_key }
 
-                    // Save Key button
                     prop save.glow = 0 ~140ms
                     box { at: card.x + 148, card.top + 270; size: 92, 36; corner: 10; color: mix(#3d6b5c, #4a8270, save.glow) }
                     text "Save Key" { at: card.x + 148, card.top + 270; anchor: center; size: 11.5; weight: 600; color: ink }
@@ -392,7 +389,6 @@ part Settings {
                     on leave save_key_btn { save.glow: 0 }
                     on press save_key_btn { emit chat_save_key }
 
-                    // Optional Browser OAuth button for ChatGPT
                     group {
                         show: chat.setup_provider == 1
                         prop oauth.glow = 0 ~140ms
@@ -404,7 +400,6 @@ part Settings {
                         on press oauth_btn { chat.setup_open = false; emit chat_login }
                     }
 
-                    // Status and Close button
                     text chat.setup_status { at: card.x - 206, card.top + 365; anchor: left center; size: 11; color: mint; width: 320; lines: 1 }
 
                     prop close.glow = 0 ~140ms

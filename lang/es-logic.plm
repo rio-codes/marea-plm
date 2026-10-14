@@ -111,7 +111,9 @@ library SpanishLogic {
         "%s %d" = "%s de %d"
 
         // the agents' reservoirs
+        "1 min" = "1 min"
         "5 hours" = "5 horas"
+        "Daily" = "Diario"
         "Weekly" = "Semanal"
         "server" = "servidor"
         "on this machine" = "en este equipo"
@@ -198,6 +200,10 @@ library SpanishLogic {
         "Signed in with %s" = "Con la sesión de %s"
         "That model cannot be used with her account: choose another in Settings" = "Ese modelo no se puede usar con su cuenta: elige otro en Ajustes"
         "The sign-in did not finish: " = "El inicio de sesión no terminó: "
+        "Connected!" = "¡Conectado!"
+        "Could not save key" = "No se pudo guardar la clave"
+        "Please enter an API key" = "Introduce una clave de API"
+        "Saving API key…" = "Guardando clave de API…"
         "She could not hear it: she is not signed in (Settings › Talking with her)." = "No pudo oírlo: no tiene sesión (Ajustes › Hablar con ella)."
         "You stopped her from the monitor." = "La paraste desde el monitor."
         "Something went wrong: " = "Algo salió mal: "

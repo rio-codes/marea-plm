@@ -415,7 +415,7 @@ async function leeGemini(conRed) {
     const limites = [
         {
             id: "rpm",
-            nombre: "Por minuto",
+            nombre: "1 min",
             duracionMin: 1,
             usadoPct: rpmPct,
             renuevaEn: renuevaMin,
@@ -423,7 +423,7 @@ async function leeGemini(conRed) {
         },
         {
             id: "diario",
-            nombre: "Diario",
+            nombre: "Daily",
             duracionMin: 1440,
             usadoPct: rpdPct,
             renuevaEn: mananaUtc,

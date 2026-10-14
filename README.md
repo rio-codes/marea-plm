@@ -47,8 +47,8 @@ screenshots, lock screen — written in [pleamar], on any Wayland compositor.
   kind; hover and she shows the latest, open the swell to read them all, with
   their actions. The *Haven* is do-not-disturb that keeps them for later.
 - **A control center that grows out of its cards**: Wi-Fi, Bluetooth, sound,
-  session, tray, calendar, focus, your AI agents' remaining quota (Claude,
-  Codex), settings — each page opens out of its own card.
+  session, tray, calendar, focus, your AI agents' remaining quota (Gemini,
+  Claude, Codex), settings — each page opens out of its own card.
 - **She talks, and can use your desktop for you** (`Super+Shift+A`, her menu,
   the finder): a chat that grows out of her, with her AI —Google Gemini,
   ChatGPT, or Claude, configured from her settings— in a sandbox of its own. With
@@ -209,7 +209,7 @@ Open her settings from the control center (the gear icon on the last card) and g
    - **Google Gemini**: Select **Google Gemini**, paste your API key from [Google AI Studio](https://aistudio.google.com/), and click **Save Key**.
    - **ChatGPT**: Select **ChatGPT** and either click **Sign in in browser** to authenticate your OpenAI account, or paste an OpenAI API key and click **Save Key**.
    - **Claude**: Select **Claude**, paste your Anthropic API key from the [Anthropic Console](https://console.anthropic.com/), and click **Save Key**.
-3. Click **Done**. Your configured models (such as `google/gemini-2.5-flash`, `openai/gpt-4o`, `anthropic/claude-3-7-sonnet`) will appear directly under **HER MODEL** ready to choose.
+3. Click **Done**. Your configured models (such as `google/gemini-3.6-flash`, `openai/gpt-4o`, `anthropic/claude-3-7-sonnet`) will appear directly under **HER MODEL** ready to choose.
 
 
 Two variables, and they are not the same:
