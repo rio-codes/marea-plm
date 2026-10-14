@@ -14,7 +14,7 @@ return function(shared)
     --  How her hands are run: what they say went wrong comes back too, and
     --  the cursor on the desktop is labelled hers.
     local HANDS = { errors = true, env = { PLEAMAR_AGENT_NAME = "Marea" } }
-    local DEFAULT_MODEL = "google/gemini-3.6-flash"
+    local DEFAULT_MODEL = "openai-codex/gpt-5.6-luna"
     local function chosen() return type(settings.chat_model) == "string" and settings.chat_model or DEFAULT_MODEL end
     local PROVIDERS = { ["openai-codex"] = "ChatGPT", ["google"] = "Google Gemini", ["anthropic"] = "Claude", ["openai"] = "OpenAI" }
     local models = {}
