@@ -18,7 +18,7 @@
 //  Marea says, never what the model says.
 
 import { createInterface } from "node:readline";
-import { mkdirSync, readFileSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
     createAgentSession,
@@ -356,6 +356,57 @@ async function signIn(m) {
     }
 }
 
+async function saveApiKey(m) {
+    const provider = typeof m.provider === "string" ? m.provider : "google";
+    const key = typeof m.key === "string" ? m.key.trim() : "";
+    const agentDir = join(STATE, "pi");
+    mkdirSync(agentDir, { recursive: true, mode: 0o700 });
+    const authPath = join(agentDir, "auth.json");
+    let auth = {};
+    try {
+        auth = JSON.parse(readFileSync(authPath, "utf-8"));
+    } catch {}
+    if (key.length > 0) {
+        auth[provider] = { type: "api_key", key };
+    } else {
+        delete auth[provider];
+    }
+    writeFileSync(authPath, JSON.stringify(auth, null, 2), { mode: 0o600 });
+    log("worker · saved api key for provider:", provider);
+
+    if (runtime && key.length > 0) {
+        try {
+            await runtime.setRuntimeApiKey(provider, key);
+        } catch (e) {
+            log("worker · setRuntimeApiKey error:", String(e?.message || e));
+        }
+    }
+    try {
+        runtime = await ModelRuntime.create({
+            authPath,
+            modelsPath: join(agentDir, "models.json"),
+            modelsStorePath: join(agentDir, "models-store.json"),
+            allowModelNetwork: false,
+            refreshOnCreate: false,
+        });
+    } catch (e) {
+        log("worker · recreate runtime error:", String(e?.message || e));
+    }
+    session = null;
+    const startMsg = started || {
+        type: "start",
+        model: provider === "google" ? "google/gemini-3.6-flash" : (provider === "anthropic" ? "anthropic/claude-3-7-sonnet" : "openai-codex/gpt-5.6-luna"),
+        locale: "en",
+        history: [],
+        memory: {}
+    };
+    if (provider === "google") startMsg.model = "google/gemini-3.6-flash";
+    else if (provider === "anthropic") startMsg.model = "anthropic/claude-3-7-sonnet";
+    else if (provider === "openai") startMsg.model = "openai/gpt-4o";
+    await start(startMsg);
+    send({ type: "key_saved", ok: true, provider, model: session?.model ? `${session.model.provider}/${session.model.id}` : null });
+}
+
 async function prompt(m) {
     if (!session || !usable) {
         send({ type: "failed", reason: session ? "no_model" : "not_started" });
@@ -433,6 +484,12 @@ input.on("line", (line) => {
             break;
         case "login_cancel":
             login?.abort();
+            break;
+        case "set_key":
+            saveApiKey(m).catch((e) => {
+                log("worker · saveApiKey error:", String(e?.message || e));
+                send({ type: "key_saved", ok: false, reason: String(e?.message || e) });
+            });
             break;
         case "cancel":
             busy?.abort();

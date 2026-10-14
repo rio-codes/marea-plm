@@ -295,28 +295,6 @@ part Settings {
             //  (only the ones that can see a picture: she looks at windows).
             page talk "Talking with her" {
                 text "She talks with you, and can use your desktop with hands of her own." { at: card.x - 228, card.top + 116; anchor: left center; size: 12; color: st.faint }
-                //  The account.
-                box { at: card.x, card.top + 164; size: 456, 60; corner: 16; color: #202021 }
-                text "Her account" { at: card.x - 206, card.top + 155; anchor: left center; size: 13; weight: 600; color: ink }
-                text pick(if(chat.signing, 0, if(chat.signed_in, 1, 2)), "Finish signing in, in your browser", chat.account, "Not signed in: she cannot talk yet") { at: card.x - 206, card.top + 173; anchor: left center; size: 11; width: 280; lines: 1; color: if(chat.signed_in, mint, st.faint) }
-                prop login.glow = 0 ~140ms
-                box { at: card.x + 160, card.top + 164; size: 112, 32; corner: 16; color: mix(mix(#2a2d30, #33383b, login.glow), #3d6b5c, if(chat.signed_in or chat.signing, 0, 1)) }
-                text pick(if(chat.signing, 0, if(chat.signed_in, 1, 2)), "Cancel", "Sign in again", "Sign in") { at: card.x + 160, card.top + 164; anchor: center; size: 12; weight: 600; color: ink }
-                zone box login_btn { at: card.x + 160, card.top + 164; size: 112, 32; corner: 16; cursor: pointer }
-                on enter login_btn { login.glow: 1 }
-                on leave login_btn { login.glow: 0 }
-                on press login_btn while chat.signing { emit chat_login_cancel }
-                on press login_btn while not chat.signing { emit chat_login }
-                //  Free hands.
-                box { at: card.x, card.top + 236; size: 456, 64; corner: 16; color: mix(#202021, #2a2519, chat.free) }
-                box { at: card.x, card.top + 236; size: 456, 64; corner: 16; stroke: 1.2; color: amber; opacity: chat.free * 70% }
-                text "Let her use the computer" { at: card.x - 206, card.top + 226; anchor: left center; size: 13; weight: 600; color: ink }
-                text "Without asking anything: she does it all, sending or buying too" { at: card.x - 206, card.top + 245; anchor: left center; size: 11; width: 350; lines: 1; color: st.faint }
-                column { at: card.x + 174, card.top + 224
-                    Switch(chat.free, flip_chat_free, accent: amber)
-                }
-                //  Her model.
-                text "HER MODEL" { at: card.x - 228, card.top + 300; anchor: left center; size: 9.5; weight: 700; color: #8b8f95 }
                 component ModelPill(m: record, choose: event) {
                     size: 146, 34
                     prop glow = 0 ~140ms
@@ -333,11 +311,110 @@ part Settings {
                     on leave touch { glow: 0 }
                     on press touch { emit choose(m.index) }
                 }
-                grid {
-                    at: card.x - 228, card.top + 316; columns: 3; gap: 9; width: 456; row: 42
-                    for m in chat.models { ModelPill(m, choose: chat_pick) }
+
+                //  When setup is closed: normal account bar and options
+                group {
+                    show: not chat.setup_open
+                    //  The account.
+                    box { at: card.x, card.top + 164; size: 456, 60; corner: 16; color: #202021 }
+                    text "Her account" { at: card.x - 206, card.top + 155; anchor: left center; size: 13; weight: 600; color: ink }
+                    text pick(if(chat.signing, 0, if(chat.signed_in, 1, 2)), "Finish signing in, in your browser", chat.account, "Not signed in: she cannot talk yet") { at: card.x - 206, card.top + 173; anchor: left center; size: 11; width: 280; lines: 1; color: if(chat.signed_in, mint, st.faint) }
+                    prop login.glow = 0 ~140ms
+                    box { at: card.x + 160, card.top + 164; size: 112, 32; corner: 16; color: mix(mix(#2a2d30, #33383b, login.glow), #3d6b5c, if(chat.signed_in or chat.signing, 0, 1)) }
+                    text pick(if(chat.signing, 0, if(chat.signed_in, 1, 2)), "Cancel", "Change", "Connect") { at: card.x + 160, card.top + 164; anchor: center; size: 12; weight: 600; color: ink }
+                    zone box login_btn { at: card.x + 160, card.top + 164; size: 112, 32; corner: 16; cursor: pointer }
+                    on enter login_btn { login.glow: 1 }
+                    on leave login_btn { login.glow: 0 }
+                    on press login_btn while chat.signing { emit chat_login_cancel }
+                    on press login_btn while not chat.signing { chat.setup_open = true }
+
+                    //  Free hands.
+                    box { at: card.x, card.top + 236; size: 456, 64; corner: 16; color: mix(#202021, #2a2519, chat.free) }
+                    box { at: card.x, card.top + 236; size: 456, 64; corner: 16; stroke: 1.2; color: amber; opacity: chat.free * 70% }
+                    text "Let her use the computer" { at: card.x - 206, card.top + 226; anchor: left center; size: 13; weight: 600; color: ink }
+                    text "Without asking anything: she does it all, sending or buying too" { at: card.x - 206, card.top + 245; anchor: left center; size: 11; width: 350; lines: 1; color: st.faint }
+                    column { at: card.x + 174, card.top + 224
+                        Switch(chat.free, flip_chat_free, accent: amber)
+                    }
+                    //  Her model.
+                    text "HER MODEL" { at: card.x - 228, card.top + 300; anchor: left center; size: 9.5; weight: 700; color: #8b8f95 }
+                    grid {
+                        at: card.x - 228, card.top + 316; columns: 3; gap: 9; width: 456; row: 42
+                        for m in chat.models { ModelPill(m, choose: chat_pick) }
+                    }
+                    text "Her models appear once she is signed in." { at: card.x - 228, card.top + 332; anchor: left center; size: 11.5; color: st.faint; show: chat.models.count < 1 }
                 }
-                text "Her models appear once she is signed in." { at: card.x - 228, card.top + 332; anchor: left center; size: 11.5; color: st.faint; show: chat.models.count < 1 }
+
+                //  When setup is open: inline provider selection & key configuration
+                group {
+                    show: chat.setup_open
+                    box { at: card.x, card.top + 265; size: 456, 260; corner: 16; color: #1c1d1e }
+                    box { at: card.x, card.top + 265; size: 456, 260; corner: 16; stroke: 1.2; color: mint; opacity: 35% }
+                    text "Connect AI Provider" { at: card.x - 206, card.top + 155; anchor: left center; size: 13; weight: 600; color: ink }
+
+                    // Provider selector pills
+                    let prov.0 = if(chat.setup_provider == 0, 1, 0)
+                    let prov.1 = if(chat.setup_provider == 1, 1, 0)
+                    let prov.2 = if(chat.setup_provider == 2, 1, 0)
+
+                    box { at: card.x - 146, card.top + 190; size: 140, 32; corner: 16; color: mix(#141415, #1a2a25, prov.0) }
+                    box { at: card.x - 146, card.top + 190; size: 140, 32; corner: 16; stroke: 1.2; color: mint; opacity: prov.0 * 70% }
+                    text "Google Gemini" { at: card.x - 146, card.top + 190; anchor: center; size: 11.5; weight: 600; color: mix(#8b8f95, ink, prov.0) }
+                    zone box prov_0_btn { at: card.x - 146, card.top + 190; size: 140, 32; corner: 16; cursor: pointer }
+                    on press prov_0_btn { chat.setup_provider = 0 }
+
+                    box { at: card.x, card.top + 190; size: 140, 32; corner: 16; color: mix(#141415, #1a2a25, prov.1) }
+                    box { at: card.x, card.top + 190; size: 140, 32; corner: 16; stroke: 1.2; color: mint; opacity: prov.1 * 70% }
+                    text "ChatGPT" { at: card.x, card.top + 190; anchor: center; size: 11.5; weight: 600; color: mix(#8b8f95, ink, prov.1) }
+                    zone box prov_1_btn { at: card.x, card.top + 190; size: 140, 32; corner: 16; cursor: pointer }
+                    on press prov_1_btn { chat.setup_provider = 1 }
+
+                    box { at: card.x + 146, card.top + 190; size: 140, 32; corner: 16; color: mix(#141415, #1a2a25, prov.2) }
+                    box { at: card.x + 146, card.top + 190; size: 140, 32; corner: 16; stroke: 1.2; color: mint; opacity: prov.2 * 70% }
+                    text "Claude" { at: card.x + 146, card.top + 190; anchor: center; size: 11.5; weight: 600; color: mix(#8b8f95, ink, prov.2) }
+                    zone box prov_2_btn { at: card.x + 146, card.top + 190; size: 140, 32; corner: 16; cursor: pointer }
+                    on press prov_2_btn { chat.setup_provider = 2 }
+
+                    // Description text
+                    text pick(chat.setup_provider, "Enter your Google AI Studio Gemini API key:", "Sign in with ChatGPT via browser, or enter an OpenAI key:", "Enter your Anthropic Claude API key:") { at: card.x - 206, card.top + 230; anchor: left center; size: 11; color: st.faint; width: 412; lines: 1 }
+
+                    // API Key input box
+                    box { at: card.x - 56, card.top + 270; size: 300, 36; corner: 10; color: #141415 }
+                    input chat.key_input { at: card.x - 196, card.top + 261; width: 280; size: 12; color: ink; placeholder: "Paste API key…"; secret: true; selection: #2f5f52 }
+                    on submit chat.key_input { emit chat_save_key }
+
+                    // Save Key button
+                    prop save.glow = 0 ~140ms
+                    box { at: card.x + 148, card.top + 270; size: 92, 36; corner: 10; color: mix(#3d6b5c, #4a8270, save.glow) }
+                    text "Save Key" { at: card.x + 148, card.top + 270; anchor: center; size: 11.5; weight: 600; color: ink }
+                    zone box save_key_btn { at: card.x + 148, card.top + 270; size: 92, 36; corner: 10; cursor: pointer }
+                    on enter save_key_btn { save.glow: 1 }
+                    on leave save_key_btn { save.glow: 0 }
+                    on press save_key_btn { emit chat_save_key }
+
+                    // Optional Browser OAuth button for ChatGPT
+                    group {
+                        show: chat.setup_provider == 1
+                        prop oauth.glow = 0 ~140ms
+                        box { at: card.x - 126, card.top + 320; size: 160, 28; corner: 14; color: mix(#2a2d30, #33383b, oauth.glow) }
+                        text "Sign in in browser" { at: card.x - 126, card.top + 320; anchor: center; size: 11; weight: 500; color: ink }
+                        zone box oauth_btn { at: card.x - 126, card.top + 320; size: 160, 28; corner: 14; cursor: pointer }
+                        on enter oauth_btn { oauth.glow: 1 }
+                        on leave oauth_btn { oauth.glow: 0 }
+                        on press oauth_btn { chat.setup_open = false; emit chat_login }
+                    }
+
+                    // Status and Close button
+                    text chat.setup_status { at: card.x - 206, card.top + 365; anchor: left center; size: 11; color: mint; width: 320; lines: 1 }
+
+                    prop close.glow = 0 ~140ms
+                    box { at: card.x + 168, card.top + 365; size: 74, 28; corner: 12; color: mix(#202021, #282a2b, close.glow) }
+                    text "Done" { at: card.x + 168, card.top + 365; anchor: center; size: 11; color: ink }
+                    zone box close_btn { at: card.x + 168, card.top + 365; size: 74, 28; corner: 12; cursor: pointer }
+                    on enter close_btn { close.glow: 1 }
+                    on leave close_btn { close.glow: 0 }
+                    on press close_btn { chat.setup_open = false }
+                }
                 //  Her tasks, one row away.
                 prop tasks.glow = 0 ~140ms
                 box { at: card.x, card.top + 470; size: 456, 40; corner: 14; color: mix(#202021, #262728, tasks.glow) }

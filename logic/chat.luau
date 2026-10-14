@@ -16,7 +16,7 @@ return function(shared)
     local HANDS = { errors = true, env = { PLEAMAR_AGENT_NAME = "Marea" } }
     local DEFAULT_MODEL = "google/gemini-3.6-flash"
     local function chosen() return type(settings.chat_model) == "string" and settings.chat_model or DEFAULT_MODEL end
-    local PROVIDERS = { ["openai-codex"] = "ChatGPT", ["google"] = "Google Gemini" }
+    local PROVIDERS = { ["openai-codex"] = "ChatGPT", ["google"] = "Google Gemini", ["anthropic"] = "Claude", ["openai"] = "OpenAI" }
     local models = {}
     fact["chat.free"] = settings.chat_free == true
     on("fact:chat.free", function() save_settings() end)
@@ -725,6 +725,14 @@ return function(shared)
             if not m.ok and m.reason ~= "cancelled" then
                 status(tr("The sign-in did not finish: ") .. tostring(m.reason or "?"))
             end
+        elseif kind == "key_saved" then
+            log("chat · key_saved: ok=" .. tostring(m.ok) .. " prov=" .. tostring(m.provider))
+            text["chat.setup_status"] = m.ok and tr("Connected!") or tr("Could not save key")
+            text["chat.key_input"] = ""
+            if m.ok then
+                fact["chat.setup_open"] = false
+                fact["chat.signed_in"] = true
+            end
         elseif kind == "delta" then
             if live == nil then
                 live = add(2, "")
@@ -1181,6 +1189,21 @@ return function(shared)
     on("chat_login_cancel", function()
         if worker then write(worker, json.encode({ type = "login_cancel" }) .. "\n") end
         fact["chat.signing"] = false
+    end)
+    on("chat_save_key", function()
+        local key = tostring(text["chat.key_input"] or ""):match("^%s*(.-)%s*$")
+        local prov_idx = fact["chat.setup_provider"] or 0
+        local prov = "google"
+        if prov_idx == 1 then prov = "openai-codex"
+        elseif prov_idx == 2 then prov = "anthropic"
+        end
+        if key == "" and prov ~= "openai-codex" then
+            text["chat.setup_status"] = tr("Please enter an API key")
+            return
+        end
+        text["chat.setup_status"] = tr("Saving API key…")
+        start_worker()
+        send({ type = "set_key", provider = prov, key = key })
     end)
     on("chat_pick", function(i)
         local name = models[(tonumber(i) or -1) + 1]

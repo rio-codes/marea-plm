@@ -17,6 +17,11 @@ part Chat {
     fact chat.signed_in = true         // until her engine says otherwise
     fact chat.signing = false          // the browser is open to sign in
     text chat.account = ""
+    fact chat.setup_open = false
+    fact chat.setup_provider = 0       // 0: Google, 1: ChatGPT, 2: Claude
+    text chat.key_input = ""
+    text chat.setup_status = ""
+    event chat_save_key ->
     model chat.models max 9 { name: text; on: number }
     event chat ->                      // `marea chat`, Super+Shift+A, her menu, the finder
     text chat.input = ""
