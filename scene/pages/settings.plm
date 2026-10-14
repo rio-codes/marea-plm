@@ -339,7 +339,7 @@ part Settings {
                     //  Her model.
                     text "HER MODEL" { at: card.x - 228, card.top + 300; anchor: left center; size: 9.5; weight: 700; color: #8b8f95 }
                     grid {
-                        at: card.x - 228, card.top + 316; columns: 3; gap: 9; width: 456; row: 42
+                        at: card.x - 228, card.top + 316; columns: 3; gap: 9; width: 456; row: 34
                         for m in chat.models { ModelPill(m, choose: chat_pick) }
                     }
                     text "Her models appear once she is signed in." { at: card.x - 228, card.top + 332; anchor: left center; size: 11.5; color: st.faint; show: chat.models.count < 1 }
@@ -417,12 +417,12 @@ part Settings {
                 }
                 //  Her tasks, one row away.
                 prop tasks.glow = 0 ~140ms
-                box { at: card.x, card.top + 470; size: 456, 40; corner: 14; color: mix(#202021, #262728, tasks.glow) }
-                text "Her tasks" { at: card.x - 206, card.top + 470; anchor: left center; size: 13; weight: 600; color: ink }
-                text tasks.summary { at: card.x + 190, card.top + 470; anchor: right center; size: 11; color: st.faint; width: 200; lines: 1; align: right }
-                line { from: card.x + 200, card.top + 465; to: card.x + 205, card.top + 470; width: 1.6; color: st.faint }
-                line { from: card.x + 205, card.top + 470; to: card.x + 200, card.top + 475; width: 1.6; color: st.faint }
-                zone box tasks_row { at: card.x, card.top + 470; size: 456, 40; corner: 14; cursor: pointer }
+                box { at: card.x, card.top + 474; size: 456, 40; corner: 14; color: mix(#202021, #262728, tasks.glow) }
+                text "Her tasks" { at: card.x - 206, card.top + 474; anchor: left center; size: 13; weight: 600; color: ink }
+                text tasks.summary { at: card.x + 190, card.top + 474; anchor: right center; size: 11; color: st.faint; width: 200; lines: 1; align: right }
+                line { from: card.x + 200, card.top + 469; to: card.x + 205, card.top + 474; width: 1.6; color: st.faint }
+                line { from: card.x + 205, card.top + 474; to: card.x + 200, card.top + 479; width: 1.6; color: st.faint }
+                zone box tasks_row { at: card.x, card.top + 474; size: 456, 40; corner: 14; cursor: pointer }
                 on enter tasks_row { tasks.glow: 1 }
                 on leave tasks_row { tasks.glow: 0 }
                 on press tasks_row { emit to_tasks }
