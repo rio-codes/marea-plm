@@ -46,7 +46,7 @@ return function(shared)
             --  A reading older than a quarter of an hour is drawn, never trusted
             --  for her face or the little tube.
             local fresh = g and g.observed and now - g.observed < 900
-            for l = 1, 4 do
+            for l = 1, 3 do
                 local w = g and g.limits[l]
                 local k = a .. "." .. l
                 fact["ag.on." .. k] = w ~= nil
