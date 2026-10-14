@@ -230,8 +230,62 @@ async function start(m) {
     } catch (e) {
         log("worker · models:", String(e?.message || e));
     }
-    const ok = session.model && session.model.provider !== "unknown" && session.model.id !== "unknown"
+    const configuredModelIds = [];
+    try {
+        const raw = readFileSync(join(agentDir, "models.json"), "utf-8");
+        const parsed = JSON.parse(raw);
+        if (parsed?.providers) {
+            for (const [pName, pVal] of Object.entries(parsed.providers)) {
+                if (Array.isArray(pVal?.models)) {
+                    for (const cm of pVal.models) {
+                        if (cm?.id) configuredModelIds.push(`${pName}/${cm.id}`);
+                    }
+                }
+            }
+        }
+    } catch {
+        // models.json not present or unparseable
+    }
+
+    const isExcluded = (id) => {
+        if (configuredModelIds.includes(id)) return false;
+        return (
+            id.startsWith("google/gemini-2.5-") ||
+            id.startsWith("google/deep-research-") ||
+            id.startsWith("google/gemini-robotics-") ||
+            id.includes("computer-use")
+        );
+    };
+
+    const defaultPreferred = [
+        "google/gemini-3.6-flash",
+        "google/gemini-3.5-flash",
+        "google/gemini-3.5-flash-lite",
+        "google/gemini-3-flash-preview",
+        "google/gemini-3.1-flash-lite",
+        "google/gemini-3.8-flash",
+        "google/gemini-3.7-flash",
+        "google/gemini-3.1-pro-preview",
+        "google/gemini-flash-latest"
+    ];
+
+    const priorityList = [...new Set([...configuredModelIds, ...defaultPreferred])];
+
+    let ok = session.model && session.model.provider !== "unknown" && session.model.id !== "unknown"
         && available.some((x) => x.provider === session.model.provider && x.id === session.model.id);
+    if (!ok && available.length > 0) {
+        const fallback = priorityList.map((id) => available.find((x) => `${x.provider}/${x.id}` === id)).find(Boolean)
+            ?? available.find((x) => x.input?.includes("image"))
+            ?? available[0];
+        if (fallback) {
+            try {
+                await session.setModel(fallback);
+                ok = true;
+            } catch (e) {
+                log("worker · setModel error:", String(e?.message || e));
+            }
+        }
+    }
     usable = !!ok;
     if (Array.isArray(m.history) && m.history.length > 0) session.agent.state.messages = restored(m.history, session.model);
     const active = session.getActiveToolNames?.() ?? [];
@@ -239,7 +293,18 @@ async function start(m) {
     if (extra.length > 0) throw new Error("unexpected_tools:" + extra.join(","));
     //  The models that can be used with this sign-in and can see a picture:
     //  without that, she cannot look at a window.
-    const models = available.filter((x) => x.input?.includes("image")).map((x) => `${x.provider}/${x.id}`);
+    const models = available
+        .filter((x) => x.input?.includes("image"))
+        .map((x) => `${x.provider}/${x.id}`)
+        .filter((id) => !isExcluded(id));
+    models.sort((a, b) => {
+        const idxA = priorityList.indexOf(a);
+        const idxB = priorityList.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+    });
     send({ type: "ready", usable, model: ok ? `${session.model.provider}/${session.model.id}` : null, reason: ok ? null : (available.length === 0 ? "signed_out" : "model_unavailable"), models });
 }
 
@@ -309,11 +374,14 @@ async function prompt(m) {
     busy = new AbortController();
     budget = { actions: 0, looks: 0 };
     const signal = busy.signal;
+    let lastError = null;
     const unsubscribe = session.subscribe((e) => {
         if (signal.aborted) return;
         if (e.type === "tool_execution_start") send({ type: "tool_start", id: e.toolCallId, tool: e.toolName });
         else if (e.type === "tool_execution_end") send({ type: "tool_end", id: e.toolCallId, ok: e.isError !== true });
-        else if (e.type === "message_update") {
+        else if (e.type === "message_end" && e.message?.errorMessage) {
+            lastError = e.message.errorMessage;
+        } else if (e.type === "message_update") {
             const d = e.assistantMessageEvent;
             if (d?.type === "text_delta" && typeof d.delta === "string") send({ type: "delta", text: d.delta });
         }
@@ -322,7 +390,13 @@ async function prompt(m) {
     signal.addEventListener("abort", stop, { once: true });
     try {
         await session.prompt(text, images.length > 0 ? { images } : undefined);
-        send({ type: signal.aborted ? "cancelled" : "done" });
+        if (signal.aborted) {
+            send({ type: "cancelled" });
+        } else if (lastError) {
+            send({ type: "failed", reason: lastError });
+        } else {
+            send({ type: "done" });
+        }
     } catch (e) {
         send(signal.aborted ? { type: "cancelled" } : { type: "failed", reason: String(e?.message || e).slice(0, 300) });
     } finally {

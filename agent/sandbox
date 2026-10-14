@@ -45,6 +45,12 @@ for f in auth.json models-store.json; do
   fi
 done
 
+cfg="${XDG_CONFIG_HOME:-$HOME/.config}/pleamar/models.json"
+if [ -f "$cfg" ] && [ ! "$cfg" -ef "$state/pi/models.json" ]; then
+  cp "$cfg" "$state/pi/models.json"
+fi
+
+
 args=(
   --unshare-all
   --share-net
@@ -83,6 +89,8 @@ args=(
   --setenv LANG C.UTF-8
   --chdir /state
 )
+
+[ -n "${GEMINI_API_KEY:-}" ] && args+=(--setenv GEMINI_API_KEY "$GEMINI_API_KEY")
 
 if (($#)); then
   [ "$1" = "--" ] && shift
